@@ -1,4 +1,4 @@
-const createService = require('/create-service');
+const createService = require('./create-service');
 
 describe('Create service', () => {
   let strapi;

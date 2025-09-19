@@ -20,9 +20,14 @@ const mockUserData = {
 };
 
 it('should login user and return JWT token', async () => {
+  const authenticatedRole = await strapi.db
+    .query('plugin::users-permissions.role')
+    .findOne({ where: { type: 'authenticated' } });
+
   // Creates a new user and saves it to the database
   await strapi.plugins['users-permissions'].services.user.add({
     ...mockUserData,
+    role: authenticatedRole?.id,
   });
 
   await request(strapi.server.httpServer)

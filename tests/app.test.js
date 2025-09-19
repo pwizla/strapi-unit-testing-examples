@@ -5,7 +5,7 @@ beforeAll(async () => {
   await setupStrapi(); // Singleton so it can be called many times
 });
 
-/** this code is called once before all the tested are finished */
+/** this code is called once before all the tests are finished */
 afterAll(async () => {
   await cleanupStrapi();
 });
@@ -13,6 +13,3 @@ afterAll(async () => {
 it('strapi is defined', () => {
   expect(strapi).toBeDefined();
 });
-
-require('./hello');
-require('./user');

@@ -1,4 +1,3 @@
-const fs = require('fs');
 const { setupStrapi, cleanupStrapi } = require('./strapi');
 const request = require('supertest');
 
@@ -25,9 +24,14 @@ const mockUserData = {
 describe('User API', () => {
   // Create and authenticate a user before all tests
   beforeAll(async () => {
+    const authenticatedRole = await strapi.db
+      .query('plugin::users-permissions.role')
+      .findOne({ where: { type: 'authenticated' } });
+
     // Create user and get JWT token
     const user = await strapi.plugins['users-permissions'].services.user.add({
       ...mockUserData,
+      role: authenticatedRole?.id,
     });
 
     const response = await request(strapi.server.httpServer)
