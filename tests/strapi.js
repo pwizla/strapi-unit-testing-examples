@@ -1,5 +1,163 @@
+try {
+  require('ts-node/register/transpile-only');
+} catch (err) {
+  try {
+    require('@strapi/typescript-utils/register');
+  } catch (strapiRegisterError) {
+    require('./ts-runtime');
+  }
+}
+
+const fs = require('fs');
+const path = require('path');
+const Module = require('module');
+const ts = require('typescript');
 const databaseConnection = require('@strapi/database/dist/connection.js');
 const knexFactory = require('knex');
+const strapiCoreRoot = path.dirname(require.resolve('@strapi/core/package.json'));
+const loadConfigFilePath = path.join(strapiCoreRoot, 'dist', 'utils', 'load-config-file.js');
+const loadConfigFileModule = require(loadConfigFilePath);
+const { compilerOptions: baseCompilerOptions } = require('./ts-compiler-options');
+
+if (!loadConfigFileModule.loadConfigFile.__tsRuntimePatched) {
+  const strapiUtils = require('@strapi/utils');
+  const originalLoadConfigFile = loadConfigFileModule.loadConfigFile;
+
+  const loadTypeScriptConfig = (file) => {
+    const source = fs.readFileSync(file, 'utf8');
+    const options = {
+      ...baseCompilerOptions,
+      module: ts.ModuleKind.CommonJS,
+    };
+
+    const output = ts.transpileModule(source, {
+      compilerOptions: options,
+      fileName: file,
+      reportDiagnostics: false,
+    });
+
+    const moduleInstance = new Module(file);
+    moduleInstance.filename = file;
+    moduleInstance.paths = Module._nodeModulePaths(path.dirname(file));
+    moduleInstance._compile(output.outputText, file);
+
+    const exported = moduleInstance.exports;
+    const resolved = exported && exported.__esModule ? exported.default : exported;
+
+    if (typeof resolved === 'function') {
+      return resolved({ env: strapiUtils.env });
+    }
+
+    return resolved;
+  };
+
+  const patchedLoadConfigFile = (file) => {
+    const extension = path.extname(file).toLowerCase();
+
+    if (extension === '.ts' || extension === '.cts' || extension === '.mts') {
+      return loadTypeScriptConfig(file);
+    }
+
+    return originalLoadConfigFile(file);
+  };
+
+  patchedLoadConfigFile.__tsRuntimePatched = true;
+  loadConfigFileModule.loadConfigFile = patchedLoadConfigFile;
+  require.cache[loadConfigFilePath].exports = loadConfigFileModule;
+}
+
+const configLoaderPath = path.join(strapiCoreRoot, 'dist', 'configuration', 'config-loader.js');
+const originalLoadConfigDir = require(configLoaderPath);
+const validExtensions = ['.js', '.json', '.ts', '.cts', '.mts'];
+const mistakenFilenames = {
+  middleware: 'middlewares',
+  plugin: 'plugins',
+};
+const restrictedFilenames = [
+  'uuid',
+  'hosting',
+  'license',
+  'enforce',
+  'disable',
+  'enable',
+  'telemetry',
+  'strapi',
+  'internal',
+  'launchedAt',
+  'serveAdminPanel',
+  'autoReload',
+  'environment',
+  'packageJsonStrapi',
+  'info',
+  'dirs',
+  ...Object.keys(mistakenFilenames),
+];
+const strapiConfigFilenames = ['admin', 'server', 'api', 'database', 'middlewares', 'plugins', 'features'];
+
+if (!originalLoadConfigDir.__tsRuntimePatched) {
+  const patchedLoadConfigDir = (dir) => {
+    if (!fs.existsSync(dir)) {
+      return {};
+    }
+
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    const seenFilenames = new Set();
+
+    const configFiles = entries.reduce((acc, entry) => {
+      if (!entry.isFile()) {
+        return acc;
+      }
+
+      const extension = path.extname(entry.name);
+      const extensionLower = extension.toLowerCase();
+      const baseName = path.basename(entry.name, extension);
+      const baseNameLower = baseName.toLowerCase();
+
+      if (!validExtensions.includes(extensionLower)) {
+        console.warn(`Config file not loaded, extension must be one of ${validExtensions.join(',')}): ${entry.name}`);
+        return acc;
+      }
+
+      if (restrictedFilenames.includes(baseNameLower)) {
+        console.warn(`Config file not loaded, restricted filename: ${entry.name}`);
+        if (baseNameLower in mistakenFilenames) {
+          console.log(`Did you mean ${mistakenFilenames[baseNameLower]}?`);
+        }
+        return acc;
+      }
+
+      const restrictedPrefix = [...restrictedFilenames, ...strapiConfigFilenames].find(
+        (restrictedName) => restrictedName.startsWith(baseNameLower) && restrictedName !== baseNameLower
+      );
+
+      if (restrictedPrefix) {
+        console.warn(`Config file not loaded, filename cannot start with ${restrictedPrefix}: ${entry.name}`);
+        return acc;
+      }
+
+      if (seenFilenames.has(baseNameLower)) {
+        console.warn(`Config file not loaded, case-insensitive name matches other config file: ${entry.name}`);
+        return acc;
+      }
+
+      seenFilenames.add(baseNameLower);
+      acc.push(entry);
+      return acc;
+    }, []);
+
+    return configFiles.reduce((acc, entry) => {
+      const extension = path.extname(entry.name);
+      const key = path.basename(entry.name, extension);
+      const filePath = path.resolve(dir, entry.name);
+
+      acc[key] = loadConfigFileModule.loadConfigFile(filePath);
+      return acc;
+    }, {});
+  };
+
+  patchedLoadConfigDir.__tsRuntimePatched = true;
+  require.cache[configLoaderPath].exports = patchedLoadConfigDir;
+}
 
 databaseConnection.createConnection = (() => {
   const clientMap = {
@@ -48,8 +206,6 @@ if (typeof jest !== 'undefined' && typeof jest.setTimeout === 'function') {
 }
 
 const { createStrapi } = require('@strapi/strapi');
-const fs = require('fs');
-const path = require('path');
 
 process.env.NODE_ENV = process.env.NODE_ENV || 'test';
 process.env.APP_KEYS = process.env.APP_KEYS || 'testKeyOne,testKeyTwo';
