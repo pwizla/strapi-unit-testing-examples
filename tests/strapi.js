@@ -63,6 +63,26 @@ process.env.DATABASE_FILENAME = process.env.DATABASE_FILENAME || ':memory:';
 process.env.STRAPI_DISABLE_CRON = 'true';
 process.env.PORT = process.env.PORT || '0';
 
+const databaseClient = process.env.DATABASE_CLIENT || 'sqlite';
+const clientMap = {
+  sqlite: 'sqlite3',
+  'better-sqlite3': 'sqlite3',
+  mysql: 'mysql2',
+  postgres: 'pg',
+};
+
+const driver = clientMap[databaseClient];
+
+if (!driver) {
+  throw new Error(`Unsupported database client "${databaseClient}".`);
+}
+
+if (databaseClient === 'better-sqlite3') {
+  process.env.DATABASE_CLIENT = 'sqlite';
+}
+
+require(driver);
+
 let instance;
 
 async function setupStrapi() {
