@@ -1,7 +1,7 @@
 module.exports = ({ env }) => {
   const filename = env('DATABASE_FILENAME', '.tmp/test.db');
-  const requestedClient = env('DATABASE_CLIENT', 'sqlite');
-  const client = requestedClient === 'sqlite3' ? 'sqlite' : requestedClient;
+  const rawClient = env('DATABASE_CLIENT', 'sqlite');
+  const client = ['sqlite3', 'better-sqlite3'].includes(rawClient) ? 'sqlite' : rawClient;
 
   return {
     connection: {
