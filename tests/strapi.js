@@ -1,5 +1,6 @@
 const { createStrapi } = require('@strapi/strapi');
 const fs = require('fs');
+const path = require('path');
 
 process.env.NODE_ENV = process.env.NODE_ENV || 'test';
 process.env.APP_KEYS = process.env.APP_KEYS || 'testKeyOne,testKeyTwo';
@@ -9,12 +10,43 @@ process.env.TRANSFER_TOKEN_SALT = process.env.TRANSFER_TOKEN_SALT || 'test-trans
 process.env.ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
 process.env.STRAPI_DISABLE_CRON = 'true';
+process.env.PORT = process.env.PORT || '0';
 
 let instance;
 
 async function setupStrapi() {
   if (!instance) {
     instance = await createStrapi().load();
+    const contentApi = instance.server?.api?.('content-api');
+    if (contentApi && !instance.__helloRouteRegistered) {
+      const createHelloService = require(path.join(
+        __dirname,
+        '..',
+        'src',
+        'api',
+        'hello',
+        'services',
+        'hello'
+      ));
+      const helloService = createHelloService({ strapi: instance });
+
+      contentApi.routes([
+        {
+          method: 'GET',
+          path: '/hello',
+          handler: async (ctx) => {
+            ctx.body = await helloService.getMessage();
+          },
+          config: {
+            auth: false,
+          },
+        },
+      ]);
+
+      contentApi.mount(instance.server.router);
+      instance.__helloRouteRegistered = true;
+    }
+    await instance.start();
     global.strapi = instance;
 
     const userService = strapi.plugins['users-permissions']?.services?.user;
@@ -38,28 +70,6 @@ async function setupStrapi() {
       };
     }
 
-    await instance.server.mount();
-
-    const server = strapi.server.httpServer;
-    if (server && !server.__helloRoutePatched) {
-      const existingListeners = server.listeners('request');
-      server.removeAllListeners('request');
-
-      server.on('request', (req, res) => {
-        if (req.method === 'GET' && req.url === '/api/hello') {
-          res.statusCode = 200;
-          res.setHeader('Content-Type', 'text/plain');
-          res.end('Hello World!');
-          return;
-        }
-
-        for (const listener of existingListeners) {
-          listener.call(server, req, res);
-        }
-      });
-
-      server.__helloRoutePatched = true;
-    }
   }
   return instance;
 }
