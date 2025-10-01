@@ -8,6 +8,8 @@ process.env.ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'test-admin-jwt-s
 process.env.TRANSFER_TOKEN_SALT = process.env.TRANSFER_TOKEN_SALT || 'test-transfer-token-salt';
 process.env.ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
+process.env.DATABASE_CLIENT = process.env.DATABASE_CLIENT || 'sqlite3';
+process.env.DATABASE_FILENAME = process.env.DATABASE_FILENAME || ':memory:';
 process.env.STRAPI_DISABLE_CRON = 'true';
 
 let instance;
