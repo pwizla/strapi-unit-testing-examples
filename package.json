@@ -51,6 +51,9 @@
       ".tmp",
       ".cache"
     ],
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "moduleNameMapper": {
+      "^/create-service$": "<rootDir>/create-service"
+    }
   }
 }

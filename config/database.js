@@ -1,6 +1,8 @@
-import path from 'path';
+'use strict';
 
-export default ({ env }) => {
+const path = require('path');
+
+module.exports = ({ env }) => {
   const rawClient = env('DATABASE_CLIENT', 'sqlite');
   const client = ['sqlite3', 'better-sqlite3'].includes(rawClient) ? 'sqlite' : rawClient;
 
@@ -15,7 +17,7 @@ export default ({ env }) => {
       filename: sqliteFilename,
     },
     useNullAsDefault: true,
-  } as const;
+  };
 
   const connections = {
     mysql: {

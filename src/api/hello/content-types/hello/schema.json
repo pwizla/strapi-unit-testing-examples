@@ -1,0 +1,14 @@
+{
+  "kind": "singleType",
+  "collectionName": "hellos",
+  "info": {
+    "singularName": "hello",
+    "pluralName": "hellos",
+    "displayName": "Hello"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {}
+}
