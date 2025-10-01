@@ -61,10 +61,11 @@ export default ({ env }) => {
   };
 
   const normalizedClient = connections[client] ? client : 'sqlite';
+  const clientForStrapi = normalizedClient === 'sqlite3' ? 'sqlite' : normalizedClient;
 
   return {
     connection: {
-      client: normalizedClient,
+      client: clientForStrapi,
       ...connections[normalizedClient],
       acquireConnectionTimeout: env.int('DATABASE_CONNECTION_TIMEOUT', 60000),
     },

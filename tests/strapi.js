@@ -1,3 +1,52 @@
+const databaseConnection = require('@strapi/database/dist/connection.js');
+const knexFactory = require('knex');
+
+databaseConnection.createConnection = (() => {
+  const clientMap = {
+    sqlite: 'sqlite3',
+    mysql: 'mysql2',
+    postgres: 'pg',
+  };
+
+  return (userConfig, strapiConfig) => {
+    if (!clientMap[userConfig.client]) {
+      throw new Error(`Unsupported database client ${userConfig.client}`);
+    }
+
+    const knexConfig = {
+      ...userConfig,
+      client: clientMap[userConfig.client],
+    };
+
+    if (strapiConfig?.pool?.afterCreate) {
+      knexConfig.pool = knexConfig.pool || {};
+
+      const userAfterCreate = knexConfig.pool?.afterCreate;
+      const strapiAfterCreate = strapiConfig.pool.afterCreate;
+
+      knexConfig.pool.afterCreate = (conn, done) => {
+        strapiAfterCreate(conn, (err, nativeConn) => {
+          if (err) {
+            return done(err, nativeConn);
+          }
+
+          if (userAfterCreate) {
+            return userAfterCreate(nativeConn, done);
+          }
+
+          return done(null, nativeConn);
+        });
+      };
+    }
+
+    return knexFactory(knexConfig);
+  };
+})();
+
+if (typeof jest !== 'undefined' && typeof jest.setTimeout === 'function') {
+  jest.setTimeout(30000);
+}
+
 const { createStrapi } = require('@strapi/strapi');
 const fs = require('fs');
 
@@ -8,7 +57,7 @@ process.env.ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'test-admin-jwt-s
 process.env.TRANSFER_TOKEN_SALT = process.env.TRANSFER_TOKEN_SALT || 'test-transfer-token-salt';
 process.env.ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
-process.env.DATABASE_CLIENT = process.env.DATABASE_CLIENT || 'sqlite3';
+process.env.DATABASE_CLIENT = process.env.DATABASE_CLIENT || 'sqlite';
 process.env.DATABASE_FILENAME = process.env.DATABASE_FILENAME || ':memory:';
 process.env.STRAPI_DISABLE_CRON = 'true';
 
