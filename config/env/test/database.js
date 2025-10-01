@@ -1,9 +1,15 @@
-module.exports = ({ env }) => ({
-  connection: {
-    client: 'sqlite',
+module.exports = ({ env }) => {
+  const filename = env('DATABASE_FILENAME', '.tmp/test.db');
+  const requestedClient = env('DATABASE_CLIENT', 'sqlite');
+  const client = requestedClient === 'sqlite3' ? 'sqlite' : requestedClient;
+
+  return {
     connection: {
-      filename: env('DATABASE_FILENAME', '.tmp/test.db'),
+      client,
+      connection: {
+        filename,
+      },
+      useNullAsDefault: true,
     },
-    useNullAsDefault: true,
-  },
-});
+  };
+};

@@ -3,6 +3,19 @@ import path from 'path';
 export default ({ env }) => {
   const client = env('DATABASE_CLIENT', 'sqlite');
 
+  const defaultSqliteFilename = env('DATABASE_FILENAME', '.tmp/data.db');
+  const sqliteFilename =
+    defaultSqliteFilename === ':memory:'
+      ? ':memory:'
+      : path.join(__dirname, '..', '..', defaultSqliteFilename);
+
+  const sqliteConnection = {
+    connection: {
+      filename: sqliteFilename,
+    },
+    useNullAsDefault: true,
+  } as const;
+
   const connections = {
     mysql: {
       connection: {
@@ -42,18 +55,18 @@ export default ({ env }) => {
       },
       pool: { min: env.int('DATABASE_POOL_MIN', 2), max: env.int('DATABASE_POOL_MAX', 10) },
     },
-    sqlite: {
-      connection: {
-        filename: path.join(__dirname, '..', '..', env('DATABASE_FILENAME', '.tmp/data.db')),
-      },
-      useNullAsDefault: true,
-    },
+    sqlite: sqliteConnection,
+    'better-sqlite3': sqliteConnection,
+    sqlite3: sqliteConnection,
   };
+
+  const normalizedClient = connections[client] ? client : 'sqlite';
+  const clientForStrapi = normalizedClient === 'sqlite3' ? 'sqlite' : normalizedClient;
 
   return {
     connection: {
-      client,
-      ...connections[client],
+      client: clientForStrapi,
+      ...connections[normalizedClient],
       acquireConnectionTimeout: env.int('DATABASE_CONNECTION_TIMEOUT', 60000),
     },
   };
