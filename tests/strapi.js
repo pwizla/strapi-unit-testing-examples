@@ -10,6 +10,26 @@ process.env.ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '0123456789abcdef0123
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
 process.env.STRAPI_DISABLE_CRON = 'true';
 
+const databaseClient = process.env.DATABASE_CLIENT || 'sqlite';
+const clientMap = {
+  sqlite: 'sqlite3',
+  'better-sqlite3': 'sqlite3',
+  mysql: 'mysql2',
+  postgres: 'pg',
+};
+
+const driver = clientMap[databaseClient];
+
+if (!driver) {
+  throw new Error(`Unsupported database client "${databaseClient}".`);
+}
+
+if (databaseClient === 'better-sqlite3') {
+  process.env.DATABASE_CLIENT = 'sqlite';
+}
+
+require(driver);
+
 let instance;
 
 async function setupStrapi() {
