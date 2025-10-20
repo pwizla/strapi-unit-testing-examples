@@ -6,6 +6,12 @@ const mime = require('mime-types');
 const { categories, authors, articles, global, about } = require('../data/data.json');
 
 async function seedExampleApp() {
+  // In test environment, skip complex seeding and just log
+  if (process.env.NODE_ENV === 'test') {
+    console.log('Test seeding: Skipping complex data import (not needed for basic tests)');
+    return;
+  }
+
   const shouldImportSeedData = await isFirstRun();
 
   if (shouldImportSeedData) {
@@ -25,6 +31,11 @@ async function seedExampleApp() {
 }
 
 async function isFirstRun() {
+  // In test environment, always return true to allow seeding
+  if (process.env.NODE_ENV === 'test') {
+    return true;
+  }
+  
   const pluginStore = global.strapi.store({
     environment: global.strapi.config.environment,
     type: 'type',
