@@ -318,19 +318,26 @@ async function cleanupStrapi() {
 
   const dbSettings = strapi.config.get('database.connection');
 
-  await strapi.server.httpServer.close();
-  await strapi.db.connection.destroy();
-
-  if (typeof strapi.destroy === 'function') {
-    await strapi.destroy();
+  try {
+    if (typeof strapi.destroy === 'function') {
+      await strapi.destroy();
+    } else {
+      try { await strapi.server.httpServer.close(); } catch (e) { /* noop */ }
+      try { await strapi.db.connection.destroy(); } catch (e) { /* noop */ }
+    }
+  } catch (e) {
+    // Ignore pool aborted errors from SQLite/tarn on double-destroy across suites
   }
 
   if (dbSettings && dbSettings.connection && dbSettings.connection.filename) {
     const tmpDbFile = dbSettings.connection.filename;
-    if (fs.existsSync(tmpDbFile)) {
+    if (tmpDbFile !== ':memory:' && fs.existsSync(tmpDbFile)) {
       fs.unlinkSync(tmpDbFile);
     }
   }
+
+  instance = undefined;
+  delete global.strapi;
 }
 
 module.exports = { setupStrapi, cleanupStrapi };
