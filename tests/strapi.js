@@ -276,6 +276,16 @@ async function setupStrapi() {
     await instance.start();
     global.strapi = instance;
 
+    // Optionally seed example data for tests if requested
+    if (process.env.TEST_SEED === 'true') {
+      try {
+        const { seedExampleApp } = require(path.join(__dirname, '..', 'scripts', 'seed'));
+        await seedExampleApp();
+      } catch (e) {
+        console.warn('Seeding failed:', e);
+      }
+    }
+
     const userService = strapi.plugins['users-permissions']?.services?.user;
     if (userService) {
       const originalAdd = userService.add.bind(userService);
