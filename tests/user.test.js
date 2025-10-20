@@ -26,11 +26,11 @@ describe('User API', () => {
   // Create and authenticate a user before all tests
   beforeAll(async () => {
     // Create user and get JWT token
-    const user = await strapi.plugins['users-permissions'].services.user.add({
+    const user = await global.strapi.plugins['users-permissions'].services.user.add({
       ...mockUserData,
     });
 
-    const response = await request(strapi.server.httpServer)
+    const response = await request(global.strapi.server.httpServer)
       .post('/api/auth/local')
       .set('accept', 'application/json')
       .set('Content-Type', 'application/json')
@@ -44,7 +44,7 @@ describe('User API', () => {
   });
 
   it('should return users data for authenticated user', async () => {
-    await request(strapi.server.httpServer)
+    await request(global.strapi.server.httpServer)
       .get('/api/users/me')
       .set('accept', 'application/json')
       .set('Content-Type', 'application/json')

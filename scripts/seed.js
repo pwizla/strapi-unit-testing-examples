@@ -25,8 +25,8 @@ async function seedExampleApp() {
 }
 
 async function isFirstRun() {
-  const pluginStore = strapi.store({
-    environment: strapi.config.environment,
+  const pluginStore = global.strapi.store({
+    environment: global.strapi.config.environment,
     type: 'type',
     name: 'setup',
   });
@@ -37,7 +37,7 @@ async function isFirstRun() {
 
 async function setPublicPermissions(newPermissions) {
   // Find the ID of the public role
-  const publicRole = await strapi.query('plugin::users-permissions.role').findOne({
+  const publicRole = await global.strapi.query('plugin::users-permissions.role').findOne({
     where: {
       type: 'public',
     },
@@ -48,7 +48,7 @@ async function setPublicPermissions(newPermissions) {
   Object.keys(newPermissions).map((controller) => {
     const actions = newPermissions[controller];
     const permissionsToCreate = actions.map((action) => {
-      return strapi.query('plugin::users-permissions.permission').create({
+      return global.strapi.query('plugin::users-permissions.permission').create({
         data: {
           action: `api::${controller}.${controller}.${action}`,
           role: publicRole.id,
@@ -82,7 +82,7 @@ function getFileData(fileName) {
 }
 
 async function uploadFile(file, name) {
-  return strapi
+  return global.strapi
     .plugin('upload')
     .service('upload')
     .upload({
@@ -101,7 +101,7 @@ async function uploadFile(file, name) {
 async function createEntry({ model, entry }) {
   try {
     // Actually create the entry in Strapi
-    await strapi.documents(`api::${model}.${model}`).create({
+    await global.strapi.documents(`api::${model}.${model}`).create({
       data: entry,
     });
   } catch (error) {
@@ -116,7 +116,7 @@ async function checkFileExistsBeforeUpload(files) {
 
   for (const fileName of filesCopy) {
     // Check if the file already exists in Strapi
-    const fileWhereName = await strapi.query('plugin::upload.file').findOne({
+    const fileWhereName = await global.strapi.query('plugin::upload.file').findOne({
       where: {
         name: fileName.replace(/\..*$/, ''),
       },

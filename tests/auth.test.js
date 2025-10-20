@@ -21,11 +21,11 @@ const mockUserData = {
 
 it('should login user and return JWT token', async () => {
   // Creates a new user and saves it to the database
-  await strapi.plugins['users-permissions'].services.user.add({
+  await global.strapi.plugins['users-permissions'].services.user.add({
     ...mockUserData,
   });
 
-  await request(strapi.server.httpServer)
+  await request(global.strapi.server.httpServer)
     .post('/api/auth/local')
     .set('accept', 'application/json')
     .set('Content-Type', 'application/json')

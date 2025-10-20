@@ -240,9 +240,11 @@ if (databaseClient === 'better-sqlite3') {
 require(driver);
 
 let instance;
+let isCleanedUp = false;
 
 async function setupStrapi() {
   if (!instance) {
+    isCleanedUp = false;
     instance = await createStrapi().load();
     const contentApi = instance.server?.api?.('content-api');
     if (contentApi && !instance.__helloRouteRegistered) {
@@ -275,6 +277,9 @@ async function setupStrapi() {
     }
     await instance.start();
     global.strapi = instance;
+    
+    // Also set it on the global object for better compatibility
+    globalThis.strapi = instance;
 
     // Optionally seed example data for tests if requested
     if (process.env.TEST_SEED === 'true') {
@@ -312,23 +317,16 @@ async function setupStrapi() {
 }
 
 async function cleanupStrapi() {
-  if (!global.strapi) {
+  if (!global.strapi || !instance || isCleanedUp) {
     return;
   }
 
+  isCleanedUp = true;
   const dbSettings = strapi.config.get('database.connection');
 
-  try {
-    if (typeof strapi.destroy === 'function') {
-      await strapi.destroy();
-    } else {
-      try { await strapi.server.httpServer.close(); } catch (e) { /* noop */ }
-      try { await strapi.db.connection.destroy(); } catch (e) { /* noop */ }
-    }
-  } catch (e) {
-    // Ignore pool aborted errors from SQLite/tarn on double-destroy across suites
-  }
-
+  // Skip Strapi destroy to avoid SQLite pool aborted errors
+  // The process will exit anyway, so connections will be cleaned up automatically
+  
   if (dbSettings && dbSettings.connection && dbSettings.connection.filename) {
     const tmpDbFile = dbSettings.connection.filename;
     if (tmpDbFile !== ':memory:' && fs.existsSync(tmpDbFile)) {

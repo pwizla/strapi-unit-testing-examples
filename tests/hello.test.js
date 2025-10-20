@@ -12,7 +12,7 @@ afterAll(async () => {
 
 it('should return hello world', async () => {
   // Get the Koa server from strapi instance
-  await request(strapi.server.httpServer)
+  await request(global.strapi.server.httpServer)
     .get('/api/hello') // Make a GET request to the API
     .expect(200) // Expect response http code 200
     .then((data) => {

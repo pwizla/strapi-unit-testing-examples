@@ -11,7 +11,7 @@ afterAll(async () => {
 });
 
 it('strapi is defined', () => {
-  expect(strapi).toBeDefined();
+  expect(global.strapi).toBeDefined();
 });
 
 require('./hello');
